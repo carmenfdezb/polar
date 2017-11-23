@@ -57,7 +57,7 @@ module PolarUsb
       read
     end
 
-	def request_put_initial(data, dest)
+	def request_put_initial(data, dest, data_left)
       packet_num = 0
 
       packet = []
@@ -74,7 +74,8 @@ module PolarUsb
 	  packet += dest.bytes
       packet += data.bytes
 
-	  if packet.length == PACKET_SIZE
+	  # more packets
+	  if data_left > 0
         packet[1] = packet[1] | 0x01
 	  end
 	  
@@ -83,14 +84,15 @@ module PolarUsb
       read_status
     end
 	
-	def request_put_next(data, packet_num)
+	def request_put_next(data, packet_num, data_left)
       packet = []
       packet[0] = 1
       packet[1] = (data.length+2) << 2
       packet[2] = packet_num
       packet += data.bytes
 	  
-	  if packet.length == PACKET_SIZE
+	  # more packets
+	  if data_left > 0
         packet[1] = packet[1] | 0x01
 	  end
 	  
@@ -100,9 +102,13 @@ module PolarUsb
     end
 	
 	def read_status
-	  packet = usb_read
-	  is_command_end = (packet[1] & 0x10) != 0
-
+	  begin
+	    packet = usb_read
+	    is_command_end = (packet[1] & 0x10) != 0
+      rescue
+	    # TODO recover from transfer_timed_out error, may be should not behave that way
+	    is_command_end = true
+	  end
 	  is_command_end
 	end
 	

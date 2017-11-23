@@ -6,8 +6,6 @@ require "#{File.dirname(__FILE__)}/protobuf/structures.pb"
 require "#{File.dirname(__FILE__)}/protobuf/pftp_request.pb"
 require "#{File.dirname(__FILE__)}/protobuf/pftp_response.pb"
 
-require "#{File.dirname(__FILE__)}/protobuf/identification.pb"
-
 class PolarFtp
   def initialize
     @polar_cnx = PolarUsb::Controller.new
@@ -15,19 +13,16 @@ class PolarFtp
   
   def put_file(source_file, remote_path)
 	puts "Uploading '#{source_file}' content to '#{remote_path}'"
-    id = PolarData::PbIdentifier.parse(File.open(source_file, 'rb').read)
-	
-	data = id.serialize_to_string
-	puts "total length = #{data.length}"
+	data = File.open(source_file, 'rb').read
+	#puts "total data length = #{data.length}"
 	
 	data_loc = 55 - remote_path.length
 	data_chunk = data[0..data_loc-1]
 	packet_num = 1
-	puts "chank #{packet_num} length = #{data_chunk.length}"
+	#puts "chunk #{packet_num} length = #{data_chunk.length}"
 	
-	is_command_end = @polar_cnx.request_put_initial(
-	  data_chunk,
-	  remote_path)
+	is_command_end = @polar_cnx.request_put_initial(data_chunk, remote_path, data.length-data_loc)
+	
     while !is_command_end
 	
 	  data_loc_end = data_loc + 61
@@ -36,8 +31,9 @@ class PolarFtp
 	  end
 	  data_chunk = data[data_loc..data_loc_end]
 	  data_loc = data_loc_end
-	  puts "chank #{packet_num+1} length = #{data_chunk.length}"
-	  is_command_end = @polar_cnx.request_put_next(data_chunk, packet_num) 
+	  #puts "chunk #{packet_num+1} length = #{data_chunk.length}"
+	  
+	  is_command_end = @polar_cnx.request_put_next(data_chunk, packet_num, data.length-data_loc) 
 	  
 	  if packet_num == 0xff
         packet_num = 0x00
@@ -48,12 +44,12 @@ class PolarFtp
 	puts "Upload done!"
   end
   
-  def put(remote_item)
-	puts "Creating item '#{remote_item}'"
+  def put(remote_dir)
+	puts "Creating item '#{remote_dir}'"
 	result = @polar_cnx.request(
       PolarProtocol::PbPFtpOperation.new(
         :command => PolarProtocol::PbPFtpOperation::Command::PUT,
-        :path => remote_item
+        :path => remote_dir
       ).serialize_to_string)
   end
   
