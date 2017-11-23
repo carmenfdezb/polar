@@ -6,31 +6,55 @@ require "#{File.dirname(__FILE__)}/protobuf/structures.pb"
 require "#{File.dirname(__FILE__)}/protobuf/pftp_request.pb"
 require "#{File.dirname(__FILE__)}/protobuf/pftp_response.pb"
 
+require "#{File.dirname(__FILE__)}/protobuf/identification.pb"
+
 class PolarFtp
   def initialize
     @polar_cnx = PolarUsb::Controller.new
   end
   
-  def put(source_file, remote_dir)
+  def put_file(source_file, remote_dir)
 	puts "Uploading '#{source_file}' to '#{remote_dir}'"
 	#read file as binary
+	remote_target = remote_dir + "ID.BPB"
+    id = PolarData::PbIdentifier.parse(File.open(source_file, 'rb').read)
 	
-	loop do 
+	data = id.serialize_to_string
 	
-	  
-      result = @polar_cnx.request_put_initial(
-        PolarProtocol::PbPFtpOperation.new(
-          :command => PolarProtocol::PbPFtpOperation::Command::PUT,
-          :path => data
-        ).serialize_to_string)
-	  
-	  if result[1] == 0x10
-	    return "ok!"
-	  else
-		next
+	puts "#{remote_target}"
+	data_loc = 54 - remote_target.length
+	data_chunk = data[0..data_loc]
+	packet_num = 1
+	
+	#puts "pushing '#{data_chunk}'"
+	puts "total '#{data.length}'"
+	puts "total '#{data_loc}'"
+	puts "pushing '#{data_chunk.length}'"
+	is_command_end = @polar_cnx.request_put_initial(
+	  data_chunk,
+	  # PolarProtocol::PbPFtpOperation.new(
+	    # :command => PolarProtocol::PbPFtpOperation::Command::PUT,
+	    # :path => data_chunk
+	  # ).serialize_to_string,
+	  remote_target)
+    while !is_command_end
+	
+	  extra = data_loc + 61
+	  if extra > data.length
+	    extra = data.length
 	  end
+	  data_chunk = data[data_loc..extra]
+	  data_loc = data_loc + 61
+	  puts "pushing '#{data_chunk.length}'"
+	  is_command_end = @polar_cnx.request_put_next(data_chunk, packet_num) 
 	  
-	end
+	  if packet_num == 0xff
+        packet_num = 0x00
+      else
+        packet_num = packet_num+1
+	  end
+    end
+	puts "Done!"
   end
   
   def put(remote_dir)

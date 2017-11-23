@@ -57,41 +57,58 @@ module PolarUsb
       read
     end
 
-	def request_put_initial(data = nil)
+	def request_put_initial(data, dest)
       packet_num = 0
 
       packet = []
       packet[0] = 1
-      packet[1] = (data.length+3) << 2
+      packet[1] = (data.length+dest.length+8) << 2
       packet[2] = packet_num
-      packet[3] = data.length
+      packet[3] = dest.length+4
       packet[4] = 0
-      packet += data.bytes
-	  
-	  if packet.length == PACKET_SIZE
-	    packet[1] = packet[1] | 0x01;
-	  end
+	  packet[5] = 0x08;
+      packet[6] = 0x01;
+      packet[7] = 0x12;
+      packet[8] = dest.length;
 
+	  packet += dest.bytes
+      packet += data.bytes
+
+	  puts "pushing packet #{packet.length}"
+	  if packet.length == PACKET_SIZE
+	    puts "moar!!"
+        packet[1] = packet[1] | 0x01
+	  end
+	  
       usb_write packet
 
-      read
+      read_status
     end
 	
-	def request_next(data, packet_num)
+	def request_put_next(data, packet_num)
       packet = []
       packet[0] = 1
-      packet[1] = (data.length+1) << 2
+      packet[1] = (data.length+2) << 2
       packet[2] = packet_num
       packet += data.bytes
-
+	  
+	  puts "pushing packet #{packet.length}"
 	  if packet.length == PACKET_SIZE
-	    packet[1] = packet[1] | 0x01;
+	    puts "moar!!"
+        packet[1] = packet[1] | 0x01
 	  end
 	  
       usb_write packet
 	  
-	  read
+	  read_status
     end
+	
+	def read_status
+	  packet = usb_read
+	  is_command_end = (packet[1] & 0x10) != 0
+
+	  is_command_end
+	end
 	
     def read
       packet_num = 0

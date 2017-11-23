@@ -77,7 +77,7 @@ when 'PUT'
     exit -2
   end
   
-  polar_ftp.put(source_file, remote_path)
+  polar_ftp.put_file(source_file, remote_path)
 
 else
   usage
