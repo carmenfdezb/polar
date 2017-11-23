@@ -18,23 +18,25 @@ class PolarFtp
     id = PolarData::PbIdentifier.parse(File.open(source_file, 'rb').read)
 	
 	data = id.serialize_to_string
+	puts "total length = #{data.length}"
 	
 	data_loc = 55 - remote_path.length
 	data_chunk = data[0..data_loc-1]
 	packet_num = 1
+	puts "chank #{packet_num} length = #{data_chunk.length}"
 	
 	is_command_end = @polar_cnx.request_put_initial(
 	  data_chunk,
 	  remote_path)
     while !is_command_end
 	
-	  extra = data_loc + 61
-	  if extra > data.length
-	    extra = data.length
+	  data_loc_end = data_loc + 61
+	  if data_loc_end > data.length
+	    data_loc_end = data.length
 	  end
-	  data_chunk = data[data_loc..extra]
-	  data_loc = data_loc + 61
-	  
+	  data_chunk = data[data_loc..data_loc_end]
+	  data_loc = data_loc_end
+	  puts "chank #{packet_num+1} length = #{data_chunk.length}"
 	  is_command_end = @polar_cnx.request_put_next(data_chunk, packet_num) 
 	  
 	  if packet_num == 0xff
