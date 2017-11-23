@@ -62,7 +62,7 @@ module PolarUsb
 
       packet = []
       packet[0] = 1
-      packet[1] = (data.length+dest.length+8) << 2
+      packet[1] = (data.length+dest.length+7) << 2
       packet[2] = packet_num
       packet[3] = dest.length+4
       packet[4] = 0
@@ -74,9 +74,7 @@ module PolarUsb
 	  packet += dest.bytes
       packet += data.bytes
 
-	  puts "pushing packet #{packet.length}"
 	  if packet.length == PACKET_SIZE
-	    puts "moar!!"
         packet[1] = packet[1] | 0x01
 	  end
 	  
@@ -88,13 +86,11 @@ module PolarUsb
 	def request_put_next(data, packet_num)
       packet = []
       packet[0] = 1
-      packet[1] = (data.length+2) << 2
+      packet[1] = (data.length+1) << 2
       packet[2] = packet_num
       packet += data.bytes
 	  
-	  puts "pushing packet #{packet.length}"
 	  if packet.length == PACKET_SIZE
-	    puts "moar!!"
         packet[1] = packet[1] | 0x01
 	  end
 	  

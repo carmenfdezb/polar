@@ -13,30 +13,19 @@ class PolarFtp
     @polar_cnx = PolarUsb::Controller.new
   end
   
-  def put_file(source_file, remote_dir)
-	puts "Uploading '#{source_file}' to '#{remote_dir}'"
-	#read file as binary
-	remote_target = remote_dir + "ID.BPB"
+  def put_file(source_file, remote_path)
+	puts "Uploading '#{source_file}' content to '#{remote_path}'"
     id = PolarData::PbIdentifier.parse(File.open(source_file, 'rb').read)
 	
 	data = id.serialize_to_string
 	
-	puts "#{remote_target}"
-	data_loc = 54 - remote_target.length
-	data_chunk = data[0..data_loc]
+	data_loc = 55 - remote_path.length
+	data_chunk = data[0..data_loc-1]
 	packet_num = 1
 	
-	#puts "pushing '#{data_chunk}'"
-	puts "total '#{data.length}'"
-	puts "total '#{data_loc}'"
-	puts "pushing '#{data_chunk.length}'"
 	is_command_end = @polar_cnx.request_put_initial(
 	  data_chunk,
-	  # PolarProtocol::PbPFtpOperation.new(
-	    # :command => PolarProtocol::PbPFtpOperation::Command::PUT,
-	    # :path => data_chunk
-	  # ).serialize_to_string,
-	  remote_target)
+	  remote_path)
     while !is_command_end
 	
 	  extra = data_loc + 61
@@ -45,7 +34,7 @@ class PolarFtp
 	  end
 	  data_chunk = data[data_loc..extra]
 	  data_loc = data_loc + 61
-	  puts "pushing '#{data_chunk.length}'"
+	  
 	  is_command_end = @polar_cnx.request_put_next(data_chunk, packet_num) 
 	  
 	  if packet_num == 0xff
@@ -54,15 +43,15 @@ class PolarFtp
         packet_num = packet_num+1
 	  end
     end
-	puts "Done!"
+	puts "Upload done!"
   end
   
-  def put(remote_dir)
-	puts "Creating directory '#{remote_dir}'"
+  def put(remote_item)
+	puts "Creating item '#{remote_item}'"
 	result = @polar_cnx.request(
       PolarProtocol::PbPFtpOperation.new(
         :command => PolarProtocol::PbPFtpOperation::Command::PUT,
-        :path => remote_dir
+        :path => remote_item
       ).serialize_to_string)
   end
   
