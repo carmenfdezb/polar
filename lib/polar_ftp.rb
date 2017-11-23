@@ -10,6 +10,46 @@ class PolarFtp
   def initialize
     @polar_cnx = PolarUsb::Controller.new
   end
+  
+  def put(source_file, remote_dir)
+	puts "Uploading '#{source_file}' to '#{remote_dir}'"
+	#read file as binary
+	
+	loop do 
+	
+	  
+      result = @polar_cnx.request_put_initial(
+        PolarProtocol::PbPFtpOperation.new(
+          :command => PolarProtocol::PbPFtpOperation::Command::PUT,
+          :path => data
+        ).serialize_to_string)
+	  
+	  if result[1] == 0x10
+	    return "ok!"
+	  else
+		next
+	  end
+	  
+	end
+  end
+  
+  def put(remote_dir)
+	puts "Creating directory '#{remote_dir}'"
+	result = @polar_cnx.request(
+      PolarProtocol::PbPFtpOperation.new(
+        :command => PolarProtocol::PbPFtpOperation::Command::PUT,
+        :path => remote_dir
+      ).serialize_to_string)
+  end
+  
+  def del(remote_dir)
+	puts "Removing '#{remote_dir}'"
+	result = @polar_cnx.request(
+      PolarProtocol::PbPFtpOperation.new(
+        :command => PolarProtocol::PbPFtpOperation::Command::REMOVE,
+        :path => remote_dir
+      ).serialize_to_string)
+  end
 
   def dir(remote_dir)
     # Directory listing

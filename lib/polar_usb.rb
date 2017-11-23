@@ -40,7 +40,7 @@ module PolarUsb
     rescue LIBUSB::ERROR_BUSY
       raise PolarUsbDeviceError.new "Polar USB device is busy"
     end
-
+	
     def request(data = nil)
       packet_num = 0
 
@@ -57,6 +57,42 @@ module PolarUsb
       read
     end
 
+	def request_put_initial(data = nil)
+      packet_num = 0
+
+      packet = []
+      packet[0] = 1
+      packet[1] = (data.length+3) << 2
+      packet[2] = packet_num
+      packet[3] = data.length
+      packet[4] = 0
+      packet += data.bytes
+	  
+	  if packet.length == PACKET_SIZE
+	    packet[1] = packet[1] | 0x01;
+	  end
+
+      usb_write packet
+
+      read
+    end
+	
+	def request_next(data, packet_num)
+      packet = []
+      packet[0] = 1
+      packet[1] = (data.length+1) << 2
+      packet[2] = packet_num
+      packet += data.bytes
+
+	  if packet.length == PACKET_SIZE
+	    packet[1] = packet[1] | 0x01;
+	  end
+	  
+      usb_write packet
+	  
+	  read
+    end
+	
     def read
       packet_num = 0
       initial_packet = true
