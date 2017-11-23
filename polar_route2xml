@@ -1,0 +1,79 @@
+#!/usr/bin/env ruby
+# Converts RAW Polar training session data files in Garmin GPX file format.
+
+require 'time'
+require 'nokogiri'
+require "#{File.dirname(__FILE__)}/lib/polar_data_parser"
+
+def usage
+  puts "Usage:"
+  puts "  #{__FILE__} <directory> [<xml file>]"
+end
+
+dir = ARGV[0]
+unless dir
+  usage
+  exit -2
+end
+
+output_file = ARGV[1] || File.join(dir, 'output.xml')
+
+def output_xml(parsed)
+  route = parsed[:fav_route]
+  
+  route_id = route.route_id.value
+  route_name = route.name.text
+  route_length = route.length
+  route_start_loc = route.start_location
+  route_start_alt = route.start_altitude
+  #start = route_start_loc.timestamp
+  #route_date = DateTime.new(start.date.year, start.date.month, start.date.day, start.time.hour, start.time.minute, start.time.seconds)
+  route_points_count = route.point.count
+  
+  builder = Nokogiri::XML::Builder.new(:encoding => 'UTF-8') do |xml|
+    xml.gpx('version' => "1.1",
+            'xmlns' => "http://www.topografix.com/GPX/1/1",
+            'xmlns:xsi' => "http://www.w3.org/2001/XMLSchema-instance",
+            'xmlns:gpxtpx' => "http://www.garmin.com/xmlschemas/TrackPointExtension/v1",
+            'creator' => 'https://github.com/cmaion/polar') {
+      xml.metadata {
+        xml.author {
+          xml.name 'https://github.com/cmaion/polar'
+        }		
+      }
+	  xml.id route_id
+	  xml.title route_name
+	  xml.length route_length
+	  xml.start_point{
+		xml.start_latitude route_start_loc.latitude
+		xml.start_longitude route_start_loc.longitude
+		xml.start_altitude route_start_alt
+		#xml.start_dt route_date.iso8601
+		xml.start_fix route_start_loc.fix
+		xml.start_satellites route_start_loc.satellites
+	  }
+	  xml.points {
+		  for i in 0..route_points_count-1
+			xml.point {
+				xml.x_offset route.point[i].x_offset
+				xml.y_offset route.point[i].y_offset
+				xml.z_offset route.point[i].z_offset
+				xml.time_offset route.point[i].time_offset
+			}
+		  end
+	  }
+    }
+  end
+  builder.to_xml
+end
+
+puts "Converting Polar route in '#{dir}' to XML format as '#{output_file}'..."
+parsed = PolarDataParser.parse_fav_route(dir)
+if parsed.key?(:fav_route)
+  File.open(output_file, 'w') do |f|
+    f << output_xml(parsed)
+  end
+  puts "Done"
+else
+  puts "Error: couldn't find route"
+end
