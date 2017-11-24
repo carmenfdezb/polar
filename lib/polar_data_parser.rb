@@ -35,7 +35,13 @@ module PolarDataParser
     end
 
 	if file = files_in_dir.select { |f| f == 'TST.BPB' }.first
-      parsed[:fav_tst] = PolarData::PbTrainingSessionTarget.parse(File.open(File.join(dir, file), 'rb').read)
+	  content = File.open(File.join(dir, file), 'rb').read
+	  begin
+        parsed[:fav_tst] = PolarData::PbTrainingSessionTarget.parse(content)
+	  rescue
+	    # not a training target - strava live segment then
+		parsed[:fav_sls] = PolarData::PbTrainingSessionTarget.parse(content)
+	  end
     end
 	
     parsed

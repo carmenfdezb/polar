@@ -6,7 +6,7 @@ def usage
   puts "Usage:"
   puts "  #{__FILE__} DIR <directory>"
   puts "  #{__FILE__} GET <file> [<output_file>]"
-  puts "  #{__FILE__} MK <remote_path>"
+  puts "  #{__FILE__} MKDIR <directory>"
   puts "  #{__FILE__} PUT <source_file> <remote_path>"
   puts "  #{__FILE__} DEL <file>"
   puts "  #{__FILE__} SYNC [<output_dir>]"
@@ -49,24 +49,24 @@ when 'SYNC'
   polar_ftp.sync(ARGV[1])
 
 when 'DEL'
-  # Directory remove
-    remote_file = ARGV[1]
-  unless remote_file
-    usage
-    exit -2
-  end
-  
-  polar_ftp.del(remote_file)
-  
-when 'MK'
-  # Entry create
+  # Entry remove
     remote_path = ARGV[1]
   unless remote_path
     usage
     exit -2
   end
   
-  polar_ftp.put(remote_path)
+  polar_ftp.del(remote_path)
+  
+when 'MKDIR'
+  # Directory create
+    remote_dir = ARGV[1]
+  unless remote_dir
+    usage
+    exit -2
+  end
+  
+  polar_ftp.put(remote_dir)
   
 when 'PUT'
   # File put

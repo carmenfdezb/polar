@@ -25,7 +25,7 @@ class PolarFtp
 	
     while !is_command_end
 	
-	  data_loc_end = data_loc + 61
+	  data_loc_end = data_loc + 60
 	  if data_loc_end > data.length
 	    data_loc_end = data.length
 	  end
@@ -45,7 +45,11 @@ class PolarFtp
   end
   
   def put(remote_dir)
-	puts "Creating item '#{remote_dir}'"
+    #to prevent file system corruption it is allowed only to create directories
+	if remote_dir[-1..-1] != '/'
+      remote_dir += '/'
+    end
+	puts "Creating directory '#{remote_dir}'"
 	result = @polar_cnx.request(
       PolarProtocol::PbPFtpOperation.new(
         :command => PolarProtocol::PbPFtpOperation::Command::PUT,
