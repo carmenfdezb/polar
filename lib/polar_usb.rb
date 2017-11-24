@@ -55,6 +55,9 @@ module PolarUsb
       usb_write packet
 
       read
+	  rescue Exception => e
+	  # TODO recover from transfer_timed_out error, may be should not behave that way
+	    puts e.message
     end
 
 	def request_put_initial(data, dest, data_left)
