@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # Converts RAW Polar training session data files in Garmin GPX file format.
 
+require 'date'
 require 'time'
 require 'nokogiri'
 require "#{File.dirname(__FILE__)}/lib/polar_data_parser"
@@ -26,9 +27,12 @@ def output_xml(parsed)
   route_length = route.length
   route_start_loc = route.start_location
   route_start_alt = route.start_altitude
-  #start = route_start_loc.timestamp
-  #route_date = DateTime.new(start.date.year, start.date.month, start.date.day, start.time.hour, start.time.minute, start.time.seconds)
+  start = route_start_loc.timestamp
+  #route_start_date = DateTime.new(start.date.year, start.date.month, start.date.day)
+  #, start.time.hour, start.time.minute, start.time.seconds)
   route_points_count = route.point.count
+  segment_start = route.segment_start_port
+  segment_end = route.segment_end_port
   
   builder = Nokogiri::XML::Builder.new(:encoding => 'UTF-8') do |xml|
     xml.gpx('version' => "1.1",
@@ -48,9 +52,21 @@ def output_xml(parsed)
 		xml.start_latitude route_start_loc.latitude
 		xml.start_longitude route_start_loc.longitude
 		xml.start_altitude route_start_alt
-		#xml.start_dt route_date.iso8601
+		xml.start_dt "%s-%s-%s_%s:%s:%s" % [start.date.year, start.date.month, start.date.day, start.time.hour, start.time.minute, start.time.seconds]
 		xml.start_fix route_start_loc.fix
 		xml.start_satellites route_start_loc.satellites
+	  }
+	  xml.strava_segment_start{
+	    xml.start_latitude_left segment_start.left_location.latitude
+		xml.start_longitude_left segment_start.left_location.longitude
+		xml.start_latitude_right segment_start.right_location.latitude
+		xml.start_longitude_right segment_start.right_location.longitude
+	  }
+	  xml.strava_segment_end{
+	    xml.start_latitude_left segment_end.left_location.latitude
+		xml.start_longitude_left segment_end.left_location.longitude
+		xml.start_latitude_right segment_end.right_location.latitude
+		xml.start_longitude_right segment_end.right_location.longitude
 	  }
 	  xml.points {
 		  for i in 0..route_points_count-1

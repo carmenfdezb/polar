@@ -1,4 +1,7 @@
 package polar_data;
+import "types.proto";
+import "structures.proto";
+import "exercise_phases.proto";
 
 message PbSteadyRacePace {
 	required .PbDuration duration = 1 ;
@@ -12,6 +15,7 @@ message PbExerciseTarget {
 	optional .polar_data.PbPhases phases = 4 ;
 	optional .PbRouteId route = 5 ;
 	optional .polar_data.PbSteadyRacePace steady_race_pace = 6 ;
+	optional .PbStravaSegmentTarget strava_segment_target = 7 ;
 }
 
 message PbTrainingSessionTarget {

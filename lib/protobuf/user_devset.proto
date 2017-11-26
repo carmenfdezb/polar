@@ -1,4 +1,5 @@
 package polar_data;
+import "types.proto";
 
 message PbUserDeviceGeneralSettings {
 	optional .PbTimeSelection OBSOLETE_time_selection = 1 ;
@@ -12,6 +13,15 @@ message PbUserDeviceGeneralSettings {
 	optional .polar_data.PbUserDeviceGeneralSettings.PbTapButtonSensitivity tap_button_sensitivity = 10 ;
 	optional .polar_data.PbUserDeviceGeneralSettings.PbInactivityAlert inactivity_alert = 11 ;
 	optional bool ble_connect_mode_enable = 12 ;
+	optional .polar_data.PbUserDeviceGeneralSettings.PbWatchFace backup_watch_face = 13 ;
+	optional .polar_data.PbUserDeviceGeneralSettings.PbFlightMode flightmode = 14 ;
+	optional .PbDeviceLocation device_location = 15 ;
+	optional int32 watch_face_color = 16 ;
+	
+	enum PbFlightMode {
+		FLIGHTMODE_OFF = 1;
+		FLIGHTMODE_ON = 2;
+	}
 	
 	enum PbWatchFace {
 		BASIC = 1;
@@ -130,6 +140,53 @@ message PbUserSmartWatchNotificationSettings {
 	optional bool sounds_enabled = 4 ;
 }
 
+message PbUserMapSettings {
+	required .polar_data.PbUserMapSettings.PbMapTopDirection map_top_direction = 1 ;
+	optional bool bike_route_data_enabled = 2 ;
+	optional bool altitude_data_enabled = 3 ;
+	
+	enum PbMapTopDirection {
+		TOP_DIRECTION_NORTH = 1;
+		TOP_DIRECTION_HEADING = 2;
+	}
+}
+
+message PbUserDeviceRinseDryMessageSettings {
+	required int32 message_count = 1 ;
+	optional .PbSystemDateTime last_modified = 2 ;
+}
+
+message PbUserDeviceMassStorageSettings {
+	required bool enabled = 1 ;
+}
+
+message PbUserDeviceDoNotDisturbSettings {
+	required bool do_not_disturb_on = 1 ;
+	optional .polar_data.PbUserDeviceDoNotDisturbSettings.PbDoNotDisturbSettingSource setting_source = 2 ;
+	
+	enum PbDoNotDisturbSettingSource {
+		SOURCE_USER = 0;
+		SOURCE_TIMED = 1;
+	}
+}
+
+message PbUserDeviceAutoSyncSettings {
+	required bool enabled = 1 ;
+}
+
+message PbUserDeviceAutomaticSampleSettings {
+	required bool ohr247_enabled = 1 ;
+}
+
+message PbUserDeviceStravaSegmentsSettings {
+	required bool enabled = 1 ;
+}
+
+message PbUserDeviceDaylightSaving {
+	required .PbSystemDateTime next_daylight_saving_time = 1 ;
+	required int32 offset = 2 ;
+}
+
 message PbUserDeviceSettings {
 	required .polar_data.PbUserDeviceGeneralSettings general_settings = 1 ;
 	optional .polar_data.PbUserDeviceAlarmSettings alarm_settings = 2 ;
@@ -140,5 +197,14 @@ message PbUserDeviceSettings {
 	optional .polar_data.PbUserDeviceResearchSettings research_settings = 7 ;
 	optional .polar_data.PbUserSafetyLightSettings safety_light_settings = 8 ;
 	optional .polar_data.PbUserSmartWatchNotificationSettings smart_watch_notification_settings = 9 ;
+	optional .polar_data.PbUserMapSettings map_settings = 10 ;
+	optional .polar_data.PbUserDeviceRinseDryMessageSettings rinse_dry_message_settings = 11 ;
+	optional .polar_data.PbUserDeviceMassStorageSettings mass_storage_settings = 12 ;
+	optional .polar_data.PbUserDeviceDoNotDisturbSettings do_not_disturb_settings = 13 ;
+	optional .polar_data.PbUserDeviceAutoSyncSettings auto_sync_settings = 14 ;
+	optional .polar_data.PbUserDeviceAutomaticSampleSettings automatic_sample_settings = 15 ;
+	optional .polar_data.PbUserDeviceStravaSegmentsSettings strava_segments_settings = 16 ;
+	optional .polar_data.PbUserDeviceDaylightSaving daylight_saving = 17 ;
+		
 	required .PbSystemDateTime last_modified = 101 ;
 }

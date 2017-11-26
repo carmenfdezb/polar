@@ -26,6 +26,8 @@ class PbRouteId < ::ProtocolBuffers::Message; end
 class PbSwimmingPoolInfo < ::ProtocolBuffers::Message; end
 class PbTrainingProgramId < ::ProtocolBuffers::Message; end
 class PbEventId < ::ProtocolBuffers::Message; end
+class PbStravaSegmentTargets < ::ProtocolBuffers::Message; end
+class PbStravaSegmentTarget < ::ProtocolBuffers::Message; end
 
 class PbVolumeTarget < ::ProtocolBuffers::Message
   # forward declarations
@@ -178,5 +180,31 @@ class PbEventId < ::ProtocolBuffers::Message
   set_fully_qualified_name "PbEventId"
 
   required :uint64, :value, 1
+end
+
+class PbStravaSegmentTargets < ::ProtocolBuffers::Message
+  set_fully_qualified_name "PbStravaSegmentTargets"
+
+  required ::PbDuration, :own_best, 1
+  required ::PbDuration, :kom_qom, 2
+end
+
+class PbStravaSegmentTarget < ::ProtocolBuffers::Message
+  # forward declarations
+
+  # enums
+  module PbStravaSegmentType
+    include ::ProtocolBuffers::Enum
+
+    set_fully_qualified_name "PbStravaSegmentTarget.PbStravaSegmentType"
+
+    STRAVA_SEGMENT_TYPE_RIDE = 1
+    STRAVA_SEGMENT_TYPE_RUN = 2
+  end
+
+  set_fully_qualified_name "PbStravaSegmentTarget"
+
+  required ::PbStravaSegmentTarget::PbStravaSegmentType, :strava_segment_type, 1
+  required ::PbStravaSegmentTargets, :strava_segment_targets, 2
 end
 

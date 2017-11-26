@@ -8,8 +8,16 @@ begin; require 'structures.pb'; rescue LoadError; end
 
 module PolarData
   # forward declarations
+  class PbStravaSegmentPort < ::ProtocolBuffers::Message; end
   class PbRoutePoint < ::ProtocolBuffers::Message; end
   class PbPlannedRoute < ::ProtocolBuffers::Message; end
+
+  class PbStravaSegmentPort < ::ProtocolBuffers::Message
+    set_fully_qualified_name "polar_data.PbStravaSegmentPort"
+
+    required ::PbLocation, :left_location, 1
+    required ::PbLocation, :right_location, 2
+  end
 
   class PbRoutePoint < ::ProtocolBuffers::Message
     set_fully_qualified_name "polar_data.PbRoutePoint"
@@ -29,6 +37,8 @@ module PolarData
     optional ::PbLocation, :start_location, 4
     optional :float, :start_altitude, 5
     repeated ::PolarData::PbRoutePoint, :point, 6
+    optional ::PolarData::PbStravaSegmentPort, :segment_start_port, 7
+    optional ::PolarData::PbStravaSegmentPort, :segment_end_port, 8
   end
 
 end

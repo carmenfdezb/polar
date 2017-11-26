@@ -105,3 +105,18 @@ message PbTrainingProgramId {
 message PbEventId {
 	required uint64 value = 1 ;
 }
+
+message PbStravaSegmentTargets {
+	required .PbDuration own_best = 1 ;
+	required .PbDuration kom_qom = 2 ;
+}
+
+message PbStravaSegmentTarget {
+	required .PbStravaSegmentTarget.PbStravaSegmentType strava_segment_type = 1 ;
+	required .PbStravaSegmentTargets strava_segment_targets = 2 ;
+	
+	enum PbStravaSegmentType {
+		STRAVA_SEGMENT_TYPE_RIDE = 1;
+		STRAVA_SEGMENT_TYPE_RUN = 2;
+	}
+}

@@ -23,8 +23,21 @@ require "#{File.dirname(__FILE__)}/protobuf/identification.pb"
 require "#{File.dirname(__FILE__)}/protobuf/exercise_phases.pb"
 require "#{File.dirname(__FILE__)}/protobuf/training_session_target.pb"
 require "#{File.dirname(__FILE__)}/protobuf/exercise_targetinfo.pb"
+require "#{File.dirname(__FILE__)}/protobuf/syncinfo.pb"
 
 module PolarDataParser
+  def self.parse_syncinfo(dir)
+    parsed = {}
+
+    files_in_dir = Dir.glob("#{dir}/*").map { |f| f.sub(/^#{dir}\//, '') }
+	
+    if file = files_in_dir.select { |f| f == 'SYNCINFO.BPB' }.first
+      parsed[:sync_info] = PolarData::PbSyncInfo.parse(File.open(File.join(dir, file), 'rb').read)
+    end
+
+    parsed
+  end
+  
   def self.parse_fav(dir)
     parsed = {}
 
@@ -35,13 +48,7 @@ module PolarDataParser
     end
 
 	if file = files_in_dir.select { |f| f == 'TST.BPB' }.first
-	  content = File.open(File.join(dir, file), 'rb').read
-	  begin
-        parsed[:fav_tst] = PolarData::PbTrainingSessionTarget.parse(content)
-	  rescue
-	    # not a training target - strava live segment then
-		parsed[:fav_sls] = PolarData::PbTrainingSessionTarget.parse(content)
-	  end
+      parsed[:fav_tst] = PolarData::PbTrainingSessionTarget.parse(File.open(File.join(dir, file), 'rb').read)
     end
 	
     parsed

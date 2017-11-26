@@ -29,6 +29,7 @@ module PolarData
     optional ::PolarData::PbPhases, :phases, 4
     optional ::PbRouteId, :route, 5
     optional ::PolarData::PbSteadyRacePace, :steady_race_pace, 6
+    optional ::PbStravaSegmentTarget, :strava_segment_target, 7
   end
 
   class PbTrainingSessionTarget < ::ProtocolBuffers::Message

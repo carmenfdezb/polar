@@ -29,6 +29,9 @@ def output_gpx(parsed)
   fav_tst = parsed[:fav_tst]
   exc_target = fav_tst.exercise_target[0]
   route = exc_target.route
+  segment = exc_target.strava_segment_target
+  kom = segment.strava_segment_targets.kom_qom
+  pr = segment.strava_segment_targets.own_best
   
   builder = Nokogiri::XML::Builder.new(:encoding => 'UTF-8') do |xml|
     xml.gpx('version' => "1.1",
@@ -41,14 +44,21 @@ def output_gpx(parsed)
           xml.name 'https://github.com/cmaion/polar'
         }		
       }
-	  xml.id fav_id.ecosystem_id
-	  xml.created_date created_date.iso8601
-	  xml.modified_date modified_date.iso8601
+	  xml.idbpb{
+	    xml.id fav_id.ecosystem_id
+	    xml.created_date created_date.iso8601
+	    xml.modified_date modified_date.iso8601
+	  }
 	  xml.name fav_tst.name.text
 	  xml.sport fav_tst.sport_id.value
 	  xml.pid fav_tst.training_program_id.value
 	  xml.target_type exc_target.target_type
 	  xml.route_id route.value
+	  xml.segment{
+	    xml.type segment.strava_segment_type
+		xml.pr "%s:%s.%s" % [pr.minutes, pr.seconds, pr.millis]
+		xml.kom "%s:%s.%s" % [kom.minutes, kom.seconds, kom.millis]
+	  }
     }
   end
   builder.to_xml
@@ -56,7 +66,7 @@ end
 
 puts "Converting Polar favorite in '#{dir}' to XML format as '#{output_file}'..."
 parsed = PolarDataParser.parse_fav(dir)
-if parsed.key?(:fav_id) #&& parsed.key?(:fav_tst)
+if parsed.key?(:fav_id) && parsed.key?(:fav_tst)
   File.open(output_file, 'w') do |f|
     f << output_gpx(parsed)
   end
