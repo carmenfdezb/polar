@@ -1,4 +1,6 @@
 package polar_data;
+import "types.proto";
+import "structures.proto";
 
 message PbPhaseGoal {
 	required .polar_data.PbPhaseGoal.PhaseGoalType goal_type = 1 ;

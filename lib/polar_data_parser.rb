@@ -20,8 +20,54 @@ require "#{File.dirname(__FILE__)}/protobuf/act_samples.pb"
 require "#{File.dirname(__FILE__)}/protobuf/recovery_times.pb"
 require "#{File.dirname(__FILE__)}/protobuf/swimming_samples.pb"
 require "#{File.dirname(__FILE__)}/protobuf/sleepanalysisresult.pb"
+require "#{File.dirname(__FILE__)}/protobuf/planned_route.pb"
+require "#{File.dirname(__FILE__)}/protobuf/identification.pb"
+require "#{File.dirname(__FILE__)}/protobuf/exercise_phases.pb"
+require "#{File.dirname(__FILE__)}/protobuf/training_session_target.pb"
+require "#{File.dirname(__FILE__)}/protobuf/exercise_targetinfo.pb"
+require "#{File.dirname(__FILE__)}/protobuf/syncinfo.pb"
 
 module PolarDataParser
+  def self.parse_syncinfo(dir)
+    parsed = {}
+
+    files_in_dir = Dir.glob("#{dir}/*").map { |f| f.sub(/^#{dir}\//, '') }
+	
+    if file = files_in_dir.select { |f| f == 'SYNCINFO.BPB' }.first
+      parsed[:sync_info] = PolarData::PbSyncInfo.parse(File.open(File.join(dir, file), 'rb').read)
+    end
+
+    parsed
+  end
+  
+  def self.parse_fav(dir)
+    parsed = {}
+
+    files_in_dir = Dir.glob("#{dir}/*").map { |f| f.sub(/^#{dir}\//, '') }
+	
+    if file = files_in_dir.select { |f| f == 'ID.BPB' }.first
+      parsed[:fav_id] = PolarData::PbIdentifier.parse(File.open(File.join(dir, file), 'rb').read)
+    end
+
+	if file = files_in_dir.select { |f| f == 'TST.BPB' }.first
+      parsed[:fav_tst] = PolarData::PbTrainingSessionTarget.parse(File.open(File.join(dir, file), 'rb').read)
+    end
+	
+    parsed
+  end
+
+  def self.parse_fav_route(dir)
+    parsed = {}
+
+    files_in_dir = Dir.glob("#{dir}/*").map { |f| f.sub(/^#{dir}\//, '') }
+	
+    if file = files_in_dir.select { |f| f == 'PROUTE.BPB' }.first
+      parsed[:fav_route] = PolarData::PbPlannedRoute.parse(File.open(File.join(dir, file), 'rb').read)
+    end
+
+    parsed
+  end
+  
   def self.parse_user_physdata(dir)
     parsed = {}
 

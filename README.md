@@ -5,6 +5,9 @@ A set of command line tools written in Ruby to interact with Polar watches and d
   * list content on the Polar watch
   * download raw files
   * backup complete content
+  * delete files and directories
+  * create directories
+  * upload files
 * `polar_physdata2txt`: convert raw polar user physical data to TXT format
 * `polar_dailysummary2txt`: convert raw polar daily summary to TXT format
 * `polar_activitysamples2csv`: convert raw polar daily activity samples (activity, steps, metabolic equivalent, sport id and inactivity notifications) to CSV format
@@ -16,10 +19,14 @@ A set of command line tools written in Ruby to interact with Polar watches and d
 * `polar_sleepanalysis2txt`: displays content of sleep analysis daily report and exports to TXT file (M430)
 
 Tested with:
+* Polar A370
 * Polar M200
 * Polar M430
+* Polar M400
+* Polar M430
+* Polar M450
 * Polar V800
-* might also work on other models (A360, M400, Loop...), but this is untested
+* might also work on other models (A360, Loop...), but this is untested
 
 Tested on Linux (Ubuntu 16.10), macOS (Yosemite) and Windows (10).
 
@@ -101,6 +108,9 @@ List and download raw files from the Polar watch, connected through USB:
 ```sh
 $ polar_ftp DIR </path/to/directory>
 $ polar_ftp GET </path/to/file> [<output_file>]
+$ polar_ftp MKDIR <directory>
+$ polar_ftp PUT <source_file> <remote_path>
+$ polar_ftp DEL <file>
 $ polar_ftp SYNC [</path/to/local/archive>]
 
 # Examples:

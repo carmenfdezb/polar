@@ -40,23 +40,81 @@ module PolarUsb
     rescue LIBUSB::ERROR_BUSY
       raise PolarUsbDeviceError.new "Polar USB device is busy"
     end
-
+	
     def request(data = nil)
       packet_num = 0
 
       packet = []
-      packet[0] = 1
+      packet[0] = 0x01
       packet[1] = (data.length+4) << 2
       packet[2] = packet_num
       packet[3] = data.length
-      packet[4] = 0
+      packet[4] = 0x00
       packet += data.bytes
 
       usb_write packet
 
       read
+	  rescue Exception => e
+	  # TODO recover from transfer_timed_out error, may be should not behave that way
+	    puts e.message
     end
 
+	def request_put_initial(data, dest, data_left)
+      packet_num = 0
+
+      packet = []
+      packet[0] = 0x01
+      packet[1] = (data.length+dest.length+8) << 2
+      packet[2] = packet_num
+      packet[3] = dest.length+4
+      packet[4] = 0x00
+	  packet[5] = 0x08
+      packet[6] = 0x01
+      packet[7] = 0x12
+      packet[8] = dest.length;
+
+	  packet += dest.bytes
+      packet += data.bytes
+
+	  # more packets
+	  if data_left > 0
+        packet[1] = packet[1] | 0x01
+	  end
+	  
+      usb_write packet
+
+      read_status
+    end
+	
+	def request_put_next(data, packet_num, data_left)
+      packet = []
+      packet[0] = 0x01
+      packet[1] = (data.length+2) << 2
+      packet[2] = packet_num
+      packet += data.bytes
+	  
+	  # more packets
+	  if data_left > 0
+        packet[1] = packet[1] | 0x01
+	  end
+	  
+      usb_write packet
+	  
+	  read_status
+    end
+	
+	def read_status
+	  begin
+	    packet = usb_read
+	    is_command_end = (packet[1] & 0x10) != 0
+      rescue
+	    # TODO recover from transfer_timed_out error, may be should not behave that way
+	    is_command_end = true
+	  end
+	  is_command_end
+	end
+	
     def read
       packet_num = 0
       initial_packet = true

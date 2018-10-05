@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+# Converts RAW Polar training session data files in Garmin GPX file format.
+
+require 'time'
+require 'nokogiri'
+require "#{File.dirname(__FILE__)}/lib/polar_data_parser"
+
+def usage
+  puts "Usage:"
+  puts "  #{__FILE__} <directory> [<xml file>]"
+end
+
+dir = ARGV[0]
+unless dir
+  usage
+  exit -2
+end
+
+output_file = ARGV[1] || File.join(dir, 'output.xml')
+
+def output_gpx(parsed)
+  info = parsed[:sync_info]
+  last_mod = info.last_modified
+  sync_tyme = info.last_synchronized
+  
+  builder = Nokogiri::XML::Builder.new(:encoding => 'UTF-8') do |xml|
+    xml.gpx('version' => "1.1",
+            'xmlns' => "http://www.topografix.com/GPX/1/1",
+            'xmlns:xsi' => "http://www.w3.org/2001/XMLSchema-instance",
+            'xmlns:gpxtpx' => "http://www.garmin.com/xmlschemas/TrackPointExtension/v1",
+            'creator' => 'https://github.com/cmaion/polar') {
+      xml.metadata {
+        xml.author {
+          xml.name 'https://github.com/cmaion/polar'
+        }		
+      }
+	  xml.changed{
+	    for i in 0..info.changed_path.length-1
+	      xml.path info.changed_path[i]
+		end
+	  }
+	  xml.last_mod "%s-%s-%s_%s:%s:%s" % [last_mod.date.year, last_mod.date.month, last_mod.date.day, last_mod.time.hour, last_mod.time.minute, last_mod.time.seconds]
+	  xml.sync_tyme "%s-%s-%s_%s:%s:%s" % [sync_tyme.date.year, sync_tyme.date.month, sync_tyme.date.day, sync_tyme.time.hour, sync_tyme.time.minute, sync_tyme.time.seconds]
+	  xml.full_sync info.full_sync_required
+    }
+  end
+  builder.to_xml
+end
+
+puts "Converting Polar sync info in '#{dir}' to XML format as '#{output_file}'..."
+parsed = PolarDataParser.parse_syncinfo(dir)
+if parsed.key?(:sync_info)
+  File.open(output_file, 'w') do |f|
+    f << output_gpx(parsed)
+  end
+  puts "Done"
+else
+  puts "Error: couldn't find sync info"
+end

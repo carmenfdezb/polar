@@ -18,4 +18,5 @@ message PbExerciseTargetInfo {
 	optional .PbRouteId route = 9 ;
 	optional .polar_data.PbSteadyRacePace steady_race_pace = 10 ;
 	optional .polar_data.PbSteadyRacePaceResult steady_race_pace_result = 11 ;
+	optional .PbStravaSegmentTarget strava_segment_target = 12 ;
 }

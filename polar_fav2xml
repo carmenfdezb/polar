@@ -1,0 +1,76 @@
+#!/usr/bin/env ruby
+# Converts RAW Polar training session data files in Garmin GPX file format.
+
+require 'time'
+require 'nokogiri'
+require "#{File.dirname(__FILE__)}/lib/polar_data_parser"
+
+def usage
+  puts "Usage:"
+  puts "  #{__FILE__} <directory> [<xml file>]"
+end
+
+dir = ARGV[0]
+unless dir
+  usage
+  exit -2
+end
+
+output_file = ARGV[1] || File.join(dir, 'output.xml')
+
+def output_gpx(parsed)
+  fav_id = parsed[:fav_id]
+  created = fav_id.created
+  modified = fav_id.last_modified
+
+  created_date = DateTime.new(created.date.year, created.date.month, created.date.day, created.time.hour, created.time.minute, created.time.seconds)
+  modified_date = DateTime.new(modified.date.year, modified.date.month, modified.date.day, modified.time.hour, modified.time.minute, modified.time.seconds)
+
+  fav_tst = parsed[:fav_tst]
+  exc_target = fav_tst.exercise_target[0]
+  route = exc_target.route
+  segment = exc_target.strava_segment_target
+  kom = segment.strava_segment_targets.kom_qom
+  pr = segment.strava_segment_targets.own_best
+  
+  builder = Nokogiri::XML::Builder.new(:encoding => 'UTF-8') do |xml|
+    xml.gpx('version' => "1.1",
+            'xmlns' => "http://www.topografix.com/GPX/1/1",
+            'xmlns:xsi' => "http://www.w3.org/2001/XMLSchema-instance",
+            'xmlns:gpxtpx' => "http://www.garmin.com/xmlschemas/TrackPointExtension/v1",
+            'creator' => 'https://github.com/cmaion/polar') {
+      xml.metadata {
+        xml.author {
+          xml.name 'https://github.com/cmaion/polar'
+        }		
+      }
+	  xml.idbpb{
+	    xml.id fav_id.ecosystem_id
+	    xml.created_date created_date.iso8601
+	    xml.modified_date modified_date.iso8601
+	  }
+	  xml.name fav_tst.name.text
+	  xml.sport fav_tst.sport_id.value
+	  xml.pid fav_tst.training_program_id.value
+	  xml.target_type exc_target.target_type
+	  xml.route_id route.value
+	  xml.segment{
+	    xml.type segment.strava_segment_type
+		xml.pr "%s:%s.%s" % [pr.minutes, pr.seconds, pr.millis]
+		xml.kom "%s:%s.%s" % [kom.minutes, kom.seconds, kom.millis]
+	  }
+    }
+  end
+  builder.to_xml
+end
+
+puts "Converting Polar favorite in '#{dir}' to XML format as '#{output_file}'..."
+parsed = PolarDataParser.parse_fav(dir)
+if parsed.key?(:fav_id) && parsed.key?(:fav_tst)
+  File.open(output_file, 'w') do |f|
+    f << output_gpx(parsed)
+  end
+  puts "Done"
+else
+  puts "Error: couldn't find favorite"
+end

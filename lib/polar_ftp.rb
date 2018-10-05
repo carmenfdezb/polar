@@ -10,6 +10,61 @@ class PolarFtp
   def initialize
     @polar_cnx = PolarUsb::Controller.new
   end
+  
+  def put_file(source_file, remote_path)
+	puts "Uploading '#{source_file}' content to '#{remote_path}'"
+	data = File.open(source_file, 'rb').read
+	#puts "total data length = #{data.length}"
+	
+	data_loc = 55 - remote_path.length
+	data_chunk = data[0..data_loc-1]
+	packet_num = 1
+	#puts "chunk #{packet_num} length = #{data_chunk.length}"
+	
+	is_command_end = @polar_cnx.request_put_initial(data_chunk, remote_path, data.length-data_loc)
+	
+    while !is_command_end
+	
+	  data_loc_end = data_loc + 60
+	  if data_loc_end > data.length
+	    data_loc_end = data.length
+	  end
+	  data_chunk = data[data_loc..data_loc_end]
+	  data_loc = data_loc_end
+	  #puts "chunk #{packet_num+1} length = #{data_chunk.length}"
+	  
+	  is_command_end = @polar_cnx.request_put_next(data_chunk, packet_num, data.length-data_loc) 
+	  
+	  if packet_num == 0xff
+        packet_num = 0x00
+      else
+        packet_num = packet_num+1
+	  end
+    end
+	puts "Upload done!"
+  end
+  
+  def put(remote_dir)
+    #to prevent file system corruption it is allowed only to create directories
+	if remote_dir[-1..-1] != '/'
+      remote_dir += '/'
+    end
+	puts "Creating directory '#{remote_dir}'"
+	result = @polar_cnx.request(
+      PolarProtocol::PbPFtpOperation.new(
+        :command => PolarProtocol::PbPFtpOperation::Command::PUT,
+        :path => remote_dir
+      ).serialize_to_string)
+  end
+  
+  def del(remote_dir)
+	puts "Removing '#{remote_dir}'"
+	result = @polar_cnx.request(
+      PolarProtocol::PbPFtpOperation.new(
+        :command => PolarProtocol::PbPFtpOperation::Command::REMOVE,
+        :path => remote_dir
+      ).serialize_to_string)
+  end
 
   def dir(remote_dir)
     # Directory listing
