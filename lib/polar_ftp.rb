@@ -1,14 +1,20 @@
 require 'fileutils'
-require "#{File.dirname(__FILE__)}/polar_usb"
-require "#{File.dirname(__FILE__)}/polar_data_parser"
-require "#{File.dirname(__FILE__)}/protobuf/types.pb"
-require "#{File.dirname(__FILE__)}/protobuf/structures.pb"
-require "#{File.dirname(__FILE__)}/protobuf/pftp_request.pb"
-require "#{File.dirname(__FILE__)}/protobuf/pftp_response.pb"
+
+require_relative "polar_usb"
+require_relative "polar_data_parser"
+
+require "types_pb"
+require "structures_pb"
+require "pftp_request_pb"
+require "pftp_response_pb"
 
 class PolarFtp
-  def initialize
-    @polar_cnx = PolarUsb::Controller.new
+  def initialize(options = {})
+    @polar_cnx = PolarUsb.detect(options)
+    unless @polar_cnx
+      puts "No Polar USB device detected."
+      exit -2
+    end
   end
 
   def dir(remote_dir)
@@ -18,18 +24,21 @@ class PolarFtp
     end
 
     puts "Listing content of '#{remote_dir}'"
-    result = @polar_cnx.request(
+
+    msg = PolarProtocol::PbPFtpOperation.encode(
       PolarProtocol::PbPFtpOperation.new(
         :command => PolarProtocol::PbPFtpOperation::Command::GET,
-        :path => remote_dir
-      ).serialize_to_string)
+        :path => remote_dir))
+
+    result = @polar_cnx.request(
+      [ msg.length & 255, msg.length >> 8 ].pack("C*") + msg)
 
     if result[0] == "\x00"
       puts "Error. Directory doesn't exists?"
       return nil
     end
 
-    PolarProtocol::PbPFtpDirectory.parse(result)
+    PolarProtocol::PbPFtpDirectory.decode(result)
   end
 
   def get(remote_file, output_file = nil)
@@ -38,11 +47,14 @@ class PolarFtp
     output_file_part = "#{output_file}.part"
 
     puts "Downloading '#{remote_file}' as '#{output_file}'"
-    result = @polar_cnx.request(
+
+    msg = PolarProtocol::PbPFtpOperation.encode(
       PolarProtocol::PbPFtpOperation.new(
         :command => PolarProtocol::PbPFtpOperation::Command::GET,
-        :path => remote_file
-      ).serialize_to_string)
+        :path => remote_file))
+
+    result = @polar_cnx.request(
+      [ msg.length & 255, msg.length >> 8 ].pack("C*") + msg)
 
     File.open(output_file_part, 'wb') do |f|
       f << result
@@ -98,7 +110,12 @@ class PolarFtp
 
             unless up2date
               FileUtils.mkdir_p(local_dir)
-              self.get(remote_dir + entry.name, local_file)
+              begin
+                remote_file = remote_dir + entry.name
+                self.get(remote_file, local_file)
+              rescue PolarUsb::PolarUsbNotPermitted
+                puts "Warning: skipping '#{remote_file}', not permitted"
+              end
             end
           end
         end

@@ -29,23 +29,23 @@ def output_tcx(parsed)
 
   start = DateTime.new(training_session.start.date.year, training_session.start.date.month, training_session.start.date.day, training_session.start.time.hour, training_session.start.time.minute, training_session.start.time.seconds, "%+i" % (training_session.start.time_zone_offset / 60)).to_time.utc
 
-  recording_interval = samples.recording_interval.hours * 3600 + samples.recording_interval.minutes * 60 + samples.recording_interval.seconds + (samples.recording_interval.millis.to_f / 1000)
+  recording_interval = samples ? samples.recording_interval.hours * 3600 + samples.recording_interval.minutes * 60 + samples.recording_interval.seconds + (samples.recording_interval.millis.to_f / 1000) : 0
 
-  samples_count = samples.speed_samples.count
+  samples_count = samples ? samples.speed_samples.count : 0
   laps_count = laps ? laps.laps.count : 0
-  route_samples_count = route_samples.latitude.count
+  route_samples_count = route_samples ? route_samples.latitude.count : 0
 
   altitude_delta = 0
   altitude_calibration_samples = samples.altitude_calibration.each do |s|
-    if s.operation == PbOperationType::SUM
+    if s.operation == :SUM
       altitude_delta = s.value
     else
       STDERR.puts "Warning: Altitude calibration data of unsupported operation type ignored"
     end
-  end if samples.altitude_calibration
+  end if samples && samples.altitude_calibration
 
   pauses = []
-  if samples.pause_times && samples.pause_times.count > 0
+  if samples && samples.pause_times && samples.pause_times.count > 0
     samples.pause_times.each do |pause|
       pauses << [ pb_duration_to_float(pause.start), pb_duration_to_float(pause.duration) ]
     end
@@ -54,7 +54,7 @@ def output_tcx(parsed)
   builder = Nokogiri::XML::Builder.new(:encoding => 'UTF-8') do |xml|
     xml.TrainingCenterDatabase('xmlns' => "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2") {
       xml.Activities {
-        sport = case sport.identifier.value
+        sport = case sport ? sport.identifier.value : nil
                 when 1,   # Running
                      27   # Trail running
                   "Running"
@@ -64,7 +64,14 @@ def output_tcx(parsed)
                   "Hiking"
                 else
                   # Strava also support "Walking" and "Swimming"
-                  "Other"
+                  case training_session && training_session.session_name ? training_session.session_name.text : nil
+                  when 'Biking', 'Cyclisme', "Vélo d'intérieur"
+                    'Biking'
+                  when 'Running', 'Course à pied'
+                    'Running'
+                  else
+                    "Other"
+                  end
                 end
         xml.Activity('Sport' => sport) {
           xml.Id start.strftime("%Y-%m-%dT%H:%M:%S.%3NZ")
@@ -75,7 +82,7 @@ def output_tcx(parsed)
           alt_offline = false
           dist_offline = false
 
-          process_lap = Proc.new { |lap_index, split_time, duration, distance, max_speed, avg_speed, max_hr, avg_hr, cadence_avg|
+          process_lap = Proc.new { |lap_index, split_time, duration, distance, max_speed, avg_speed, max_hr, avg_hr, cadence_avg, avg_watts, max_watts|
             xml.Lap('xmlns' => "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2", 'StartTime' => (start + elapsed_with_pauses).strftime("%Y-%m-%dT%H:%M:%S.%3NZ")) {
               xml.TotalTimeSeconds duration
               xml.DistanceMeters distance
@@ -92,7 +99,7 @@ def output_tcx(parsed)
               xml.Intensity 'Active'
               xml.Cadence cadence_avg if cadence_avg && cadence_avg > 0
               xml.TriggerMethod 'Manual'
-              create_new_track = true
+              create_new_track = !!samples
               while create_new_track do
                 xml.Track {
                   create_new_track = false
@@ -137,6 +144,17 @@ def output_tcx(parsed)
                       end
                       xml.Cadence samples.cadence_samples[i] if samples.cadence_samples[i]
                       xml.SensorState 'Present'
+                      if samples.left_pedal_power_samples[i]
+                        xml.Extensions {
+                          xml.TPX('xmlns' => "http://www.garmin.com/xmlschemas/ActivityExtension/v2") {
+                            if samples.right_pedal_power_samples[i] && samples.right_pedal_power_samples[i].current_power > 0
+                              xml.Watts samples.left_pedal_power_samples[i].current_power + samples.right_pedal_power_samples[i].current_power
+                            else
+                              xml.Watts samples.left_pedal_power_samples[i].current_power * 2
+                            end
+                          }
+                        }
+                      end
                       first_sample_with_gps = false if first_sample_with_gps
                     }
 
@@ -146,10 +164,16 @@ def output_tcx(parsed)
                   end
                 }
               end
-              if avg_speed && avg_speed > 0
+              if (avg_speed && avg_speed > 0) || (avg_watts && avg_watts > 0)
                 xml.Extensions {
                   xml.LX('xmlns' => "http://www.garmin.com/xmlschemas/ActivityExtension/v2") {
-                    xml.AvgSpeed avg_speed
+                    if avg_speed && avg_speed > 0
+                      xml.AvgSpeed avg_speed
+                    end
+                    if avg_watts && avg_watts > 0
+                      xml.AvgWatts avg_watts
+                      xml.MaxWatts max_watts
+                    end
                   }
                 }
               end
@@ -162,11 +186,13 @@ def output_tcx(parsed)
               pb_duration_to_float(training_session.duration) + recording_interval,
               pb_duration_to_float(training_session.duration).round.to_f,
               training_session.distance,
-              exercise_stats.speed.maximum.to_f * 1000 / 3600,
-              exercise_stats.speed.average.to_f * 1000 / 3600,
-              training_session.heart_rate.maximum,
-              training_session.heart_rate.average,
-              exercise_stats.cadence.average
+              exercise_stats.speed ? exercise_stats.speed.maximum.to_f * 1000 / 3600 : nil,
+              exercise_stats.speed ? exercise_stats.speed.average.to_f * 1000 / 3600 : nil,
+              training_session.heart_rate ? training_session.heart_rate.maximum : nil,
+              training_session.heart_rate ? training_session.heart_rate.average : nil,
+              exercise_stats.cadence ? exercise_stats.cadence.average : nil,
+              exercise_stats.power ? exercise_stats.power.average : nil,
+              exercise_stats.power ? exercise_stats.power.maximum : nil
             )
           else
             laps.laps.each_with_index do |lap, lap_index|
@@ -175,11 +201,13 @@ def output_tcx(parsed)
                 pb_duration_to_float(lap.header.split_time),
                 pb_duration_to_float(lap.header.duration).round.to_f,
                 lap.header.distance,
-                lap.statistics.speed ? lap.statistics.speed.maximum.to_f * 1000 / 3600 : nil,
-                lap.statistics.speed ? lap.statistics.speed.average.to_f * 1000 / 3600 : nil,
-                lap.statistics.heart_rate ? lap.statistics.heart_rate.maximum : nil,
-                lap.statistics.heart_rate ? lap.statistics.heart_rate.average : nil,
-                lap.statistics.cadence ? lap.statistics.cadence.average : nil
+                lap.statistics && lap.statistics.speed ? lap.statistics.speed.maximum.to_f * 1000 / 3600 : nil,
+                lap.statistics && lap.statistics.speed ? lap.statistics.speed.average.to_f * 1000 / 3600 : nil,
+                lap.statistics && lap.statistics.heart_rate ? lap.statistics.heart_rate.maximum : nil,
+                lap.statistics && lap.statistics.heart_rate ? lap.statistics.heart_rate.average : nil,
+                lap.statistics && lap.statistics.cadence ? lap.statistics.cadence.average : nil,
+                lap.statistics && lap.statistics.power ? lap.statistics.power.average : nil,
+                lap.statistics && lap.statistics.power ? lap.statistics.power.maximum : nil
               )
             end
           end
@@ -228,8 +256,9 @@ end
 puts "Converting Polar training session in '#{dir}' to TCX format as '#{output_file}'..."
 parsed = PolarDataParser.parse_training_session(dir)
 if parsed.key?(:training_session)
+  output = output_tcx(parsed)
   File.open(output_file, 'w') do |f|
-    f << output_tcx(parsed)
+    f << output
   end
   puts "Done"
 else
